@@ -8,8 +8,18 @@ export const userRegister = createAsyncThunk(
       let response = await api.post("/register", data);
       console.log("Reseponse :", response);
     } catch (error) {
-      console.log(error);
-      return rejectWithValue(error);
+      if (error.response) {
+        // Erreur de validation Laravel (souvent statut 422)
+        if (error.response.status === 422 && error.response.data.errors) {
+          return rejectWithValue(error.response.data);
+        }
+
+        // Autres erreurs (401, 500, etc.). Renvoyez un message général.
+        return rejectWithValue({
+          message:
+            "Network Error or Server Unreachable. Please try again later.",
+        });
+      }
     }
   }
 );
@@ -19,7 +29,6 @@ const AuthSlice = createSlice({
   initialState: {
     userRegister: {
       status: "idle",
-      error: null,
     },
   },
   reducers: {},
@@ -27,19 +36,16 @@ const AuthSlice = createSlice({
     builder
       .addCase(userRegister.pending, (state, action) => {
         state.userRegister.status = "loading";
-        state.userRegister.error = null;
 
         console.log("Register Pending:", action.payload);
       })
       .addCase(userRegister.fulfilled, (state, action) => {
         state.userRegister.status = "succeeded";
-        state.userRegister.error = null;
 
         console.log("Register Fulfilled:", action);
       })
       .addCase(userRegister.rejected, (state, action) => {
         (state.userRegister.status = "failed"),
-          (state.userRegister.error = action),
           console.log("Register Rejected:", action);
       });
   },

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { User, Mail, Lock, Briefcase, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { User, Mail, Lock, Briefcase, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { userRegister } from '../features/AuthSlice';
@@ -28,29 +28,60 @@ const schema = yup.object().shape({
 export default function RegisterPage() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { status, error } = useSelector((state)=>state.auth.userRegister);
+    const { status } = useSelector((state) => state.auth.userRegister);
+    const [generalError, setGeneralError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    console.log({ status, error });
-    
+    console.log({ status });
+
 
     const {
         register,
         handleSubmit,
         formState: { errors },
+        setError,
     } = useForm({
         resolver: yupResolver(schema)
     });
 
     const onSubmit = async (data) => {
         try {
-            await dispatch(userRegister(data))
-            if (status==='succeeded' && !error) {
-                navigate('/login')
+            console.log('Data of Register user :', data);
+
+            let response = await dispatch(userRegister(data))
+            console.log('Response :', response);
+
+            if (response.meta.requestStatus === 'rejected') {
+                const errorPayload = response.payload;
+
+                if (errorPayload && errorPayload.errors) {
+                    const backendErrors = errorPayload.errors;
+
+                    Object.keys(backendErrors).forEach(fieldName => {
+                        setError(fieldName, {
+                            type: 'server',
+                            message: backendErrors[fieldName][0],
+                        });
+                    });
+
+                    if (errorPayload.message) {
+                        setGeneralError(errorPayload.message);
+                    }
+
+                } else if (errorPayload && errorPayload.message) {
+                    setGeneralError(errorPayload.message);
+                } else {
+                    setGeneralError("Registration failed due to an unknown error.");
+                }
+
+            } else if (response.meta.requestStatus === 'fulfilled') {
+                // SUCCESS LOGIC
+                navigate("/login")
             }
         } catch (error) {
-            console.error("Registration failed:", error);
+            console.error("Error:", error);
+            setGeneralError("An unexpected client-side error occurred. Please try again.");
         }
     };
 
@@ -64,6 +95,13 @@ export default function RegisterPage() {
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h1>
                     <p className="text-gray-600">Join our job search platform today</p>
                 </div>
+
+                {generalError && (
+                    <div className="flex items-center p-4 mb-4 text-sm text-red-800 border border-red-300 rounded-lg bg-red-50 shadow-sm" role="alert">
+                        <AlertTriangle className="flex-shrink-0 inline w-4 h-4 mr-3" />
+                        {generalError}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                     {/* Name Field */}
