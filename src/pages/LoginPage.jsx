@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -17,7 +17,7 @@ const schema = yup.object().shape({
 });
 
 export default function LoginPage() {
-    const {status} = useSelector((state) => state.auth.userLogin);
+    const { status } = useSelector((state) => state.auth.userLogin);
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -33,8 +33,8 @@ export default function LoginPage() {
         resolver: yupResolver(schema)
     });
 
-    const onSubmit = useCallback(async (data) => {
-        setGeneralError(null); 
+    const onSubmit = async (data) => {
+        setGeneralError(null);
 
         try {
             console.log('Login attempt with data:', data);
@@ -45,7 +45,7 @@ export default function LoginPage() {
 
             if (response.meta.requestStatus === 'rejected') {
                 const errorPayload = response.payload;
-                
+
                 // Effacer toutes les erreurs du formulaire (nécessaire pour Redux Hook Form)
                 Object.keys(errors).forEach(key => setError(key, null));
 
@@ -75,14 +75,13 @@ export default function LoginPage() {
                 }
 
             } else if (response.meta.requestStatus === 'fulfilled') {
-                // LOGIQUE DE SUCCÈS: Le token est sauvegardé dans les cookies (simulé)
-                console.log("Login successful");
+                alert("Login Successfully !!!")
             }
         } catch (error) {
             console.error("Client-side error during login:", error);
             setGeneralError("An unexpected error occurred. Please try again.");
         }
-    }, [errors, setError, navigate]);
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 flex items-center justify-center p-4">
@@ -104,7 +103,7 @@ export default function LoginPage() {
                 )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                    
+
                     {/* Email Field */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -122,7 +121,7 @@ export default function LoginPage() {
                         </div>
                         {errors.email && (
                             <p className="mt-1 text-sm text-red-600 font-medium flex items-center">
-                                <AlertTriangle className="w-4 h-4 mr-1"/>{errors.email.message}
+                                <AlertTriangle className="w-4 h-4 mr-1" />{errors.email.message}
                             </p>
                         )}
                     </div>
@@ -151,7 +150,7 @@ export default function LoginPage() {
                         </div>
                         {errors.password && (
                             <p className="mt-1 text-sm text-red-600 font-medium flex items-center">
-                                <AlertTriangle className="w-4 h-4 mr-1"/>{errors.password.message}
+                                <AlertTriangle className="w-4 h-4 mr-1" />{errors.password.message}
                             </p>
                         )}
                     </div>
@@ -178,6 +177,14 @@ export default function LoginPage() {
                     </a>
                 </p>
             </div>
+            <style>{`
+                body, html {
+                    margin: 0;
+                    padding: 0;
+                    height: 100%;
+                    overflow: hidden
+                }
+            `}</style>
         </div>
     );
 }
