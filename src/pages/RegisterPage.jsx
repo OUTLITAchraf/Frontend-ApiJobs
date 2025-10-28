@@ -33,9 +33,6 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    console.log({ status });
-
-
     const {
         register,
         handleSubmit,
@@ -246,7 +243,7 @@ export default function RegisterPage() {
 
                 <p className="text-center text-gray-600 mt-6">
                     Already have an account?{' '}
-                    <a href="#" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                    <a href="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
                         Sign In
                     </a>
                 </p>
