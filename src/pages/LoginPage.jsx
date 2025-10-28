@@ -4,8 +4,10 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Mail, Lock, Briefcase, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { userLogin } from '../features/AuthSlice';
+import { useDispatch } from 'react-redux';
+import { fetchAuthUser, userLogin } from '../features/AuthSlice';
+import Cookies from "js-cookie";
+
 
 // --- Validation Schema ---
 const schema = yup.object().shape({
@@ -17,9 +19,8 @@ const schema = yup.object().shape({
 });
 
 export default function LoginPage() {
-    const { status } = useSelector((state) => state.auth.userLogin);
     const dispatch = useDispatch();
-    const navigate = useNavigate();
+    const navigate = useNavigate();    
 
     const [generalError, setGeneralError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
@@ -37,20 +38,15 @@ export default function LoginPage() {
         setGeneralError(null);
 
         try {
-            console.log('Login attempt with data:', data);
 
-            // Appel de la fonction mockée
             let response = await dispatch(userLogin(data));
-            console.log('Login Response:', response);
 
             if (response.meta.requestStatus === 'rejected') {
                 const errorPayload = response.payload;
 
-                // Effacer toutes les erreurs du formulaire (nécessaire pour Redux Hook Form)
                 Object.keys(errors).forEach(key => setError(key, null));
 
                 if (errorPayload && errorPayload.errors) {
-                    // Scénario 1: Erreurs de validation (422) - Injection dans les champs
                     const backendErrors = errorPayload.errors;
 
                     Object.keys(backendErrors).forEach(fieldName => {
@@ -67,15 +63,30 @@ export default function LoginPage() {
                     }
 
                 } else if (errorPayload && errorPayload.message) {
-                    // Scénario 2: Erreurs génériques (401, 500, échec réseau)
                     setGeneralError(errorPayload.message);
                 } else {
-                    // Scénario 3: Erreur inconnue
                     setGeneralError("Login failed due to an unknown error.");
                 }
 
             } else if (response.meta.requestStatus === 'fulfilled') {
-                alert("Login Successfully !!!")
+                const userResponse = await dispatch(fetchAuthUser());
+
+                if (userResponse.meta.requestStatus === "fulfilled") {
+                    
+                    const user = userResponse.payload;
+                    const role = user.roles?.[0]?.name;
+
+                    Cookies.set("authUser", JSON.stringify(user), {
+                    expires: 7,
+                    sameSite: "strict",
+                    });
+
+                    if (role === "employer") {
+                    navigate("/dashboard-emloyer");
+                    } else {
+                    navigate("/offers");
+                    }
+                }
             }
         } catch (error) {
             console.error("Client-side error during login:", error);

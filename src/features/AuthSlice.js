@@ -2,13 +2,31 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api from "../service/api";
 import Cookies from "js-cookie";
 
+function getInitialUser() {
+    const userCookie = Cookies.get('authUser'); // 'js-cookie' handles URI decoding
+    if (!userCookie) {
+        return null;
+    }
+    try {
+        // Parse the JSON string back into an object
+        return JSON.parse(userCookie);
+    } catch (e) {
+        console.error("Failed to parse user cookie:", e);
+        Cookies.remove('authUser'); // Clear the bad cookie
+        return null;
+    }
+}
+
+
+// --- Initial State (Loaded from Cookies) ---
+const initialUser = getInitialUser();
+
 export const userRegister = createAsyncThunk(
   "auth/register",
   async (data, { rejectWithValue }) => {
     try {
       await api.post("/register", data);
     } catch (error) {
-
       if (error.response) {
         // Erreur de validation Laravel (souvent statut 422)
         if (error.response.status === 422 && error.response.data.errors) {
@@ -55,26 +73,38 @@ export const userLogin = createAsyncThunk(
 export const fetchAuthUser = createAsyncThunk(
   "auth/fetchAuthUser",
   async (_, { rejectWithValue }) => {
-    try {
+try {
       const response = await api.get("/user");
-      const user = response.data.user;
-
-      // Optional: update user in cookies for persistence
-      Cookies.set("authUser", JSON.stringify(user), {
-        expires: 7,
-        secure: true,
-        sameSite: "strict",
-      });
-
-      return user;
+      return response.data.user;
     } catch (error) {
-      console.error("Error fetching authenticated user:", error);
+      if (error.response && error.response.status === 401) {
+        // Token invalid or missing
+        Cookies.remove("authToken");
+        Cookies.remove("authUser");
+        return rejectWithValue({ message: "Unauthenticated" });
+      }
+      return rejectWithValue({
+        message: "Network or server error",
+      });
+    }
+  }
+);
+
+export const userLogout = createAsyncThunk(
+  "auth/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      await api.post("/logout");
 
       Cookies.remove("authToken");
       Cookies.remove("authUser");
 
+      return true;
+    } catch (error) {
+      console.error("Logout failed:", error);
+
       return rejectWithValue({
-        message: "Unauthorized or session expired",
+        message: "Logout failed or server unreachable",
       });
     }
   }
@@ -84,7 +114,7 @@ const AuthSlice = createSlice({
   name: "auth",
   initialState: {
     token: Cookies.get("authToken") ? Cookies.get("authToken") : null,
-    user: null,
+    user: initialUser,
     userRegister: {
       status: "idle",
     },
@@ -124,7 +154,6 @@ const AuthSlice = createSlice({
 
         Cookies.set("authToken", action.payload.token, {
           expires: 7,
-          secure: true,
           sameSite: "strict",
         });
 
@@ -155,6 +184,21 @@ const AuthSlice = createSlice({
         state.token = null;
 
         console.log("Fetch Auth User Rejected:", action);
+      });
+    builder
+      .addCase(userLogout.pending, (state) => {
+        state.userLogin.status = "loading";
+      })
+      .addCase(userLogout.fulfilled, (state) => {
+        state.userLogin.status = "succeeded";
+        state.token = null;
+        state.user = null;
+        Cookies.remove("authToken");
+        Cookies.remove("authUser");
+      })
+      .addCase(userLogout.rejected, (state, action) => {
+        state.userLogin.status = "failed";
+        console.log("Logout Rejected:", action);
       });
   },
 });

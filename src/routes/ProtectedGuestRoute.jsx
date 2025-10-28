@@ -8,14 +8,23 @@ const ProtectedGuestRoute = () => {
   const dispatch = useDispatch();
   const token = Cookies.get("authToken");
   const { user } = useSelector((state) => state.auth);
-
+  
+  const role = user.roles?.[0]?.name;  
+  
   useEffect(() => {
     dispatch(fetchAuthUser());
   }, [dispatch]);
   
   
   if (token && user) {
-    return <Navigate to="/offers" replace />;
+    if (role == 'user') {
+      return <Navigate to="/offers" replace />;
+    } else if (role == 'employer') {
+      return <Navigate to="/dashboard-emloyer" replace />;
+    } else {
+      return <Navigate to="/dashboard-admin" replace />;
+    }
+    
   }
 
   return <Outlet />;
