@@ -9,7 +9,7 @@ const ProtectedGuestRoute = () => {
   const token = Cookies.get("authToken");
   const { user } = useSelector((state) => state.auth);
   
-  const role = user.roles?.[0]?.name;  
+  const role = user?.roles?.[0]?.name;  
   
   useEffect(() => {
     dispatch(fetchAuthUser());
